@@ -331,6 +331,8 @@
         generateId: true
       });
 
+      BasePMTilesName = BasePMTilesName.replace("-", "")
+
       map.addLayer({
         'id': 'pmtiles-road-1',
         'source': 'pmtiles-road',
