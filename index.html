@@ -66,7 +66,6 @@
       overflow: scroll;
     }
 
-    /*
     #select-pmtiles {
       padding: 3px 4px;
       font: 12px/14px Arial, Helvetica, sans-serif;
@@ -81,7 +80,6 @@
       left: 5px;
       z-index: 10;
     }
-    */
 
     th,
     td {
@@ -97,16 +95,13 @@
 
 <body>
   <div id="map"></div>
-  <!--
   <div id="select-pmtiles">
     <label><b>データセット<br>(RoadDetections)</b></label><br>
     <select id="pmtiles" onchange="SelectPMTiles()">
       <option value="Japan-Full">Japan</option>
-      <option value="MS_BuildingFootprints_Ukraine">Ukraine</option>
-      <option value="032010110">UnitedStates</option>
+      <option value="_USA">UnitedStates</option>
     </select>
   </div>
-  -->
   <div class="map-overlay top">
     <div class="map-overlay-inner">
       <label>道路データ 線の太さ倍率: <span id="line-slider-width-value">1倍</span></label>
@@ -211,6 +206,7 @@
 
       protocol.add(p);
 
+      // MSベクトルタイル
       map.addSource("pmtiles-road", {
         type: "vector",
         url: "pmtiles://" + PMTiles_URL,
@@ -286,6 +282,120 @@
 
     });
 
+    // マップの中心座標を設定
+    function getMapCenter(CenterText) {
+      const CenterTable = {
+        // キー：国、値：緯度、経度
+        'Japan-Full': [139.7671248, 35.6812362], // 東京都
+        '_USA': [-74.00047, 40.71727], // ニューヨーク
+      };
+      return CenterTable[CenterText];
+    }
+
+    // PMTiles切り替え表示
+    function SelectPMTiles() {
+      var BasePMTilesName = document.getElementById('pmtiles').value;
+
+      // 一旦、ソースとレイヤ削除
+      map.removeLayer('pmtiles-road-1');
+      map.removeLayer('pmtiles-road-2');
+      map.removeLayer('pmtiles-road-3');
+      map.removeSource('pmtiles-road');
+
+      // 国名を引数として関数を呼び出し、返された値を変数に代入
+      const locationInfo = getMapCenter(BasePMTilesName);
+
+      // 値を緯度、経度にそれぞれ代入
+      const longitude = locationInfo[0];
+      const latitude = locationInfo[1];
+
+      // マップの中心座標へ遷移
+      map.flyTo({
+        center: [longitude, latitude],
+        zoom: 14
+      });
+
+      // MSベクトルタイル
+      let PMTiles_URL = "https://xs489works.xsrv.jp/pmtiles-data/MS_RoadDetections/" + BasePMTilesName + ".pmtiles";
+
+      const p = new pmtiles.PMTiles(PMTiles_URL)
+      p.getMetadata().then((res) => console.log(res));
+
+      protocol.add(p);
+
+      // MSベクトルタイル
+      map.addSource("pmtiles-road", {
+        type: "vector",
+        url: "pmtiles://" + PMTiles_URL,
+        attribution: '<a href="https://github.com/microsoft/RoadDetections">© Microsoft RoadDetectionsを加工して作成</a>',
+        generateId: true
+      });
+
+      map.addLayer({
+        'id': 'pmtiles-road-1',
+        'source': 'pmtiles-road',
+        'source-layer': BasePMTilesName,
+        "minzoom": 10,
+        "maxzoom": 23,
+        'type': 'line',
+        'paint': {
+          "line-color": 'rgb(0, 112, 32)',
+          "line-width": 3,
+          'line-blur': 0.8
+        }
+      });
+
+      map.addLayer({
+        'id': 'pmtiles-road-2',
+        'source': 'pmtiles-road',
+        'source-layer': BasePMTilesName,
+        "minzoom": 10,
+        "maxzoom": 23,
+        'type': 'line',
+        'paint': {
+          "line-color": 'rgb(0, 172, 64)',
+          "line-width": 1.5,
+          'line-blur': 0.4
+        }
+      });
+
+      map.addLayer({
+        'id': 'pmtiles-road-3',
+        'source': 'pmtiles-road',
+        'source-layer': BasePMTilesName,
+        "minzoom": 10,
+        "maxzoom": 23,
+        'type': 'line',
+        'paint': {
+          "line-color": 'rgb(220, 236, 220)',
+          "line-width": 0.5,
+        }
+      });
+
+      // スライダーで道路の線の太さを制御
+      const linesliderWidth = document.getElementById('line-slider-width');
+      const linesliderWidthValue = document.getElementById('line-slider-width-value');
+
+      linesliderWidth.addEventListener('input', (e) => {
+        map.setPaintProperty(
+          'pmtiles-road-1',
+          'line-width',
+          parseFloat(e.target.value) * 6
+        );
+        map.setPaintProperty(
+          'pmtiles-road-2',
+          'line-width',
+          parseFloat(e.target.value) * 3
+        );
+        map.setPaintProperty(
+          'pmtiles-road-3',
+          'line-width',
+          parseFloat(e.target.value) * 1
+        );
+        linesliderWidthValue.textContent = e.target.value + '倍';
+      });
+
+    }
   </script>
 </body>
 
